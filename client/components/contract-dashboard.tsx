@@ -11,80 +11,34 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import type { ContractData, ApiConfig, AnalysisType } from "@/lib/types"
 import { apiService } from "@/lib/api-service"
-
-// Helper function to safely use localStorage
-const safeLocalStorage = {
-  getItem: (key: string): string | null => {
-    if (typeof window !== 'undefined') {
-      try {
-        return localStorage.getItem(key)
-      } catch (error) {
-        console.warn('localStorage not available:', error)
-        return null
-      }
-    }
-    return null
-  },
-  setItem: (key: string, value: string): void => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(key, value)
-      } catch (error) {
-        console.warn('localStorage not available:', error)
-      }
-    }
-  },
-  removeItem: (key: string): void => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.removeItem(key)
-      } catch (error) {
-        console.warn('localStorage not available:', error)
-      }
-    }
-  }
-}
+import { contractStorage } from "@/lib/localStorage"
+import { useLocalStorage } from "@/lib/useLocalStorage"
 
 export function ContractDashboard() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [contractData, setContractData] = useState<ContractData | null>(null)
-  const [isUploadMinimized, setIsUploadMinimized] = useState(false)
-  const [apiConfig, setApiConfig] = useState<ApiConfig | null>(null)
-  const [analysisType, setAnalysisType] = useState<AnalysisType>({ type: "Contract Review" })
-  const [customQuery, setCustomQuery] = useState("")
   const [isLoadingFromStorage, setIsLoadingFromStorage] = useState(true)
+
+  // Use localStorage utilities for all persistent state
+  const [isUploadMinimized, setIsUploadMinimized] = useLocalStorage('upload-minimized', false)
+  const [apiConfig, setApiConfig] = useLocalStorage<ApiConfig | null>('api-config', null)
+  const [analysisType, setAnalysisType] = useLocalStorage<AnalysisType>('analysis-type', { type: "Contract Review" })
+  const [customQuery, setCustomQuery] = useLocalStorage('custom-query', '')
 
   // Load persisted data on component mount
   useEffect(() => {
     const loadPersistedData = () => {
       try {
         // Load contract data
-        const storedContractData = safeLocalStorage.getItem('contract-data')
+        const storedContractData = contractStorage.getContractData()
         if (storedContractData) {
-          const parsedData = JSON.parse(storedContractData)
-          setContractData(parsedData)
+          setContractData(storedContractData)
           setIsUploadMinimized(true) // Minimize upload card if we have data
         }
 
-        // Load API config
-        const storedApiConfig = safeLocalStorage.getItem('api-config')
-        if (storedApiConfig) {
-          const parsedConfig = JSON.parse(storedApiConfig)
-          setApiConfig(parsedConfig)
-          apiService.setConfig(parsedConfig)
-        }
-
-        // Load analysis type
-        const storedAnalysisType = safeLocalStorage.getItem('analysis-type')
-        if (storedAnalysisType) {
-          const parsedAnalysisType = JSON.parse(storedAnalysisType)
-          setAnalysisType(parsedAnalysisType)
-        }
-
-        // Load custom query
-        const storedCustomQuery = safeLocalStorage.getItem('custom-query')
-        if (storedCustomQuery) {
-          setCustomQuery(storedCustomQuery)
+        // Set API config in service if it exists
+        if (apiConfig) {
+          apiService.setConfig(apiConfig)
         }
       } catch (error) {
         console.warn('Error loading persisted data:', error)
@@ -94,30 +48,17 @@ export function ContractDashboard() {
     }
 
     loadPersistedData()
-  }, [])
+  }, [apiConfig])
 
-  // Persist API config when it changes
+  // Set API config in service when it changes
   useEffect(() => {
     if (apiConfig) {
-      safeLocalStorage.setItem('api-config', JSON.stringify(apiConfig))
+      apiService.setConfig(apiConfig)
     }
   }, [apiConfig])
 
-  // Persist analysis type when it changes
-  useEffect(() => {
-    safeLocalStorage.setItem('analysis-type', JSON.stringify(analysisType))
-  }, [analysisType])
-
-  // Persist custom query when it changes
-  useEffect(() => {
-    if (customQuery) {
-      safeLocalStorage.setItem('custom-query', customQuery)
-    }
-  }, [customQuery])
-
   const handleApiConfigChange = (config: ApiConfig) => {
     setApiConfig(config)
-    apiService.setConfig(config)
   }
 
   const handleFileUpload = async (file: File) => {
@@ -138,7 +79,7 @@ export function ContractDashboard() {
       setContractData(data)
 
       // Persist the new contract data immediately
-      safeLocalStorage.setItem('contract-data', JSON.stringify(data))
+      contractStorage.setContractData(data)
     } catch (error) {
       console.error("Analysis failed:", error)
       alert("Analysis failed. Please check your API configuration and try again.")
@@ -153,8 +94,7 @@ export function ContractDashboard() {
     setIsAnalyzing(false)
 
     // Clear persisted contract data but keep other settings
-    safeLocalStorage.removeItem('contract-data')
-    safeLocalStorage.removeItem('contract-active-tab')
+    contractStorage.clearContractData()
   }
 
   const handleClearAllData = () => {
@@ -165,11 +105,7 @@ export function ContractDashboard() {
     setIsUploadMinimized(false)
 
     // Clear all persisted data
-    safeLocalStorage.removeItem('contract-data')
-    safeLocalStorage.removeItem('api-config')
-    safeLocalStorage.removeItem('analysis-type')
-    safeLocalStorage.removeItem('custom-query')
-    safeLocalStorage.removeItem('contract-active-tab')
+    contractStorage.clearAll()
   }
 
   // Show loading state while checking for persisted data
@@ -190,7 +126,7 @@ export function ContractDashboard() {
 
         <div className="container mx-auto px-4 py-8 max-w-7xl">
           {/* Show data persistence indicator if we have stored data */}
-          {contractData && safeLocalStorage.getItem('contract-data') && (
+          {contractData && contractStorage.getContractData() && (
               <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
