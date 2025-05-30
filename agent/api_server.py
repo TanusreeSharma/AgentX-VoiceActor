@@ -43,7 +43,7 @@ QDRANT_CONFIG = {
 class AnalysisResponse(BaseModel):
     analysis: str  # The main analysis markdown
     key_points: str  # The key points markdown
-    recommendations: str  # The recommendations markdown
+    negotiations: str  # The negotiations markdown
 
 
 def create_legal_team(knowledge_base, reference_base):
@@ -90,7 +90,7 @@ def create_legal_team(knowledge_base, reference_base):
         instructions=[
             "Develop comprehensive legal strategies",
             "Always rely on the legal researcher if need any external information"
-            "Provide actionable recommendations",
+            "Provide actionable negotiation strategies",
             "Consider both risks and opportunities"
         ],
         markdown=True
@@ -115,7 +115,7 @@ def create_legal_team(knowledge_base, reference_base):
             "Coordinate analysis between team members",
             "Always transfer the task to the legal researcher if need for external information, such as risk assessment framework or legal precedent",
             "Provide comprehensive responses",
-            "Ensure all recommendations are properly sourced",
+            "Ensure all negotiation strategies are properly sourced",
             "Reference specific parts of the uploaded document",
             "Always search the knowledge base before delegating tasks"
         ],
@@ -322,7 +322,7 @@ async def analyze_contract(
             return AnalysisResponse(
                 analysis=risk_review_content,
                 key_points=scoring_content,
-                recommendations=""
+                negotiations=""
             )
         else:
 
@@ -357,23 +357,23 @@ async def analyze_contract(
                         key_points_content = message.content
                         break
 
-            # Third call: Recommendations
-            print("Generating recommendations...")
-            recommendations_query = f"""Based on this previous analysis:
+            # Third call: Negotiations
+            print("Generating negotiation strategies...")
+            negotiations_query = f"""Based on this previous analysis:
             {analysis_content}
 
-            What are your key recommendations based on the analysis, the best course of action?
-            Provide specific recommendations from: {', '.join(config['agents'])}"""
+            What are your key negotiation strategies and positions based on the analysis? What negotiation points should be prioritized and what tactical approaches would be most effective?
+            Provide specific negotiation strategies from: {', '.join(config['agents'])}"""
 
-            recommendations_response = legal_team.run(recommendations_query)
+            negotiations_response = legal_team.run(negotiations_query)
 
-            recommendations_content = ""
-            if recommendations_response.content:
-                recommendations_content = recommendations_response.content
+            negotiations_content = ""
+            if negotiations_response.content:
+                negotiations_content = negotiations_response.content
             else:
-                for message in recommendations_response.messages:
+                for message in negotiations_response.messages:
                     if message.role == 'assistant' and message.content:
-                        recommendations_content = message.content
+                        negotiations_content = message.content
                         break
 
             # Now parse all three responses together
@@ -382,7 +382,7 @@ async def analyze_contract(
             return AnalysisResponse(
                 analysis=analysis_content,
                 key_points=key_points_content,
-                recommendations=recommendations_content
+                negotiations=negotiations_content
             )
 
     except Exception as e:
