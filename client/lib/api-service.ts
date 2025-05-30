@@ -1,6 +1,6 @@
 import type {ApiConfig, AnalysisType, ContractData} from './types'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8501'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export class ApiService {
     private config: ApiConfig | null = null

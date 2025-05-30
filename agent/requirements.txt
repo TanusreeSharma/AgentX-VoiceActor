@@ -1,17 +1,7 @@
 # Core dependencies
 agno
-streamlit==1.40.2
 qdrant-client==1.12.1
-ollama==0.4.4
 
 # API dependencies
 fastapi
 uvicorn
-python-multipart
-pydantic
-
-# Additional dependencies that might be needed
-openai
-pypdf
-numpy
-pandas
